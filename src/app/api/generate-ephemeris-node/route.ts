@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 
 export const runtime = 'nodejs';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   // Accept JSON body from frontend
   const birthData = await req.json();
 
-  return new Promise((resolve) => {
+  return await new Promise<Response>((resolve) => {
     try {
       const py = spawn('python', ['astro_sweph_api.py'], {
         cwd: process.cwd(),
