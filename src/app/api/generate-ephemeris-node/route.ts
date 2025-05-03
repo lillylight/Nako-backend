@@ -1,5 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
+
+export const runtime = 'nodejs';
 
 export const routeSegmentConfig = {
   api: {
@@ -8,39 +10,40 @@ export const routeSegmentConfig = {
   },
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   // Accept JSON body from frontend
-  const birthData = req.body;
+  const birthData = await req.json();
 
-  try {
-    const py = spawn('python', ['astro_sweph_api.py'], {
-      cwd: process.cwd(),
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-    const input = JSON.stringify(birthData);
-    let result = '';
-    let errResult = '';
-    py.stdout.on('data', (data) => { result += data.toString(); });
-    py.stderr.on('data', (err) => { errResult += err.toString(); });
-    py.on('close', (code) => {
-      if (code === 0) {
-        try {
-          res.status(200).json(JSON.parse(result));
-        } catch (e) {
-          res.status(500).json({ error: 'Failed to parse Python output', details: result });
+  return new Promise((resolve) => {
+    try {
+      const py = spawn('python', ['astro_sweph_api.py'], {
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      const input = JSON.stringify(birthData);
+      let result = '';
+      let errResult = '';
+      py.stdout.on('data', (data) => { result += data.toString(); });
+      py.stderr.on('data', (err) => { errResult += err.toString(); });
+      py.on('close', (code) => {
+        if (code === 0) {
+          try {
+            resolve(NextResponse.json(JSON.parse(result)));
+          } catch (e) {
+            resolve(NextResponse.json({ error: 'Failed to parse Python output', details: result }, { status: 500 }));
+          }
+        } else {
+          resolve(NextResponse.json({ error: 'Python script error', details: errResult }, { status: 500 }));
         }
-      } else {
-        res.status(500).json({ error: 'Python script error', details: errResult });
-      }
-    });
-    py.stdin.write(input);
-    py.stdin.end();
-  } catch (e) {
-    res.status(500).json({ error: 'Server error', details: e.message });
-  }
+      });
+      py.stdin.write(input);
+      py.stdin.end();
+    } catch (e) {
+      resolve(NextResponse.json({ error: 'Server error', details: (e instanceof Error ? e.message : String(e)) }, { status: 500 }));
+    }
+  });
 }
