@@ -3,13 +3,6 @@ import { spawn } from 'child_process';
 
 export const runtime = 'nodejs';
 
-export const routeSegmentConfig = {
-  api: {
-    bodyParser: true,
-    externalResolver: true,
-  },
-};
-
 export async function POST(req: NextRequest) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
