@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { spawn } from 'child_process';
 
-export const config = {
+export const routeSegmentConfig = {
   api: {
     bodyParser: true,
     externalResolver: true,
